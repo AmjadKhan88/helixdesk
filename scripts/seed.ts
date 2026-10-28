@@ -13,10 +13,11 @@ async function seed() {
     Ticket.deleteMany({}), Message.deleteMany({}), Counter.deleteMany({}),
   ]);
 
-  const [amara, jonas] = await User.create([
-    { name: "Amara Reed", email: "amara@helixdesk.dev", password: "admin1234", role: "admin" },
-    { name: "Jonas Meyer", email: "jonas@acme.io", password: "customer1234", role: "customer" },
-  ]);
+const [amara, jonas] = await User.create([
+  { name: "Amjad ullah", email: "amjadfast87@gmail.com", password: "admin@890", role: "admin" },
+  { name: "Kashif ullah", email: "kashif@gmail.com", password: "kashif@890", role: "customer" },
+  { name: "Bilal Ahmad", email: "bilalahmad@gmail.com", password: "bilal@890", role: "agent" },
+]);
 
   const [billing] = await Category.create(
     ["Billing", "Bug", "Account", "API"].map((name) => ({ name }))
