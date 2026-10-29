@@ -1,19 +1,13 @@
-import { auth } from "@/auth";
 import { getQueueCounts } from "@/lib/queries/queues";
+import { requirePageUser } from "@/lib/session";
 import { Sidebar } from "./sidebar";
 
 export async function SidebarLoader() {
-  const session = await auth();
-  if (!session?.user) return null;
-  const counts = await getQueueCounts(session.user.id);
-
+  const user = await requirePageUser();
+  const counts = await getQueueCounts(user.id);
   return (
     <Sidebar
-      user={{
-        name: session.user.name ?? "User",
-        email: session.user.email ?? "",
-        role: session.user.role,
-      }}
+      user={{ name: user.name, email: user.email, role: user.role }}
       counts={counts}
     />
   );

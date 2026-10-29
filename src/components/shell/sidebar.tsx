@@ -11,6 +11,7 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  Settings,
   Siren,
   Tags,
   UserRound,
@@ -153,6 +154,12 @@ function SidebarBody({ user, counts }: Props) {
               icon={Users}
               label="Team"
               active={pathname.startsWith("/admin/team")}
+            />
+            <NavLink
+              href="/admin/settings"
+              icon={Settings}
+              label="Settings"
+              active={pathname.startsWith("/admin/settings")}
             />
           </NavGroup>
         )}

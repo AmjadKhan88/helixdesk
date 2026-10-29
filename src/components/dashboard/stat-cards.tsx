@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { getStats } from "@/lib/queries/dashboard";
 import { formatDuration } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { getSettings } from "@/lib/queries/settings";
 
 const link = "underline-offset-2 hover:text-fg hover:underline";
 
@@ -63,6 +64,7 @@ export async function StatCards() {
   const session = await auth();
   if (!session) return null;
   const s = await getStats(session.user.id);
+  const targetMs = (await getSettings()).firstResponseTargetMinutes * 60_000;
   const { currentMs, previousMs } = s.response;
 
   // Resolved today vs yesterday
@@ -127,6 +129,16 @@ export async function StatCards() {
         value={currentMs == null ? "–" : formatDuration(currentMs)}
       >
         {responseNote}
+        {currentMs != null && (
+          <span
+            className={
+              currentMs <= targetMs ? "text-ok-ink" : "text-danger-ink"
+            }
+          >
+            {currentMs <= targetMs ? "Within" : "Over"}{" "}
+            {formatDuration(targetMs)} target
+          </span>
+        )}
       </StatCard>
     </section>
   );

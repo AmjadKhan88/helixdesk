@@ -4,6 +4,7 @@ const variants = {
   primary: "bg-brand text-on-brand hover:bg-brand-hover",
   secondary: "border border-line-strong bg-surface text-fg hover:bg-surface-2",
   ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
+  danger: "bg-danger text-on-brand hover:bg-danger/90",
 };
 const sizes = {
   sm: "h-8 gap-1.5 px-3 text-[13px]",

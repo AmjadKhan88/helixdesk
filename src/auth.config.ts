@@ -23,11 +23,19 @@ export const authConfig = {
       const user = auth?.user;
       const path = nextUrl.pathname;
 
+      if (path === "/account-disabled" || path.startsWith("/invite"))
+        return true;
+
       if (path === "/login") {
-        return user ? Response.redirect(new URL(homeFor(user.role), nextUrl)) : true;
+        return user
+          ? Response.redirect(new URL(homeFor(user.role), nextUrl))
+          : true;
       }
-      if (path === "/") return user ? Response.redirect(new URL(homeFor(user.role), nextUrl)) : false;
-      
+      if (path === "/")
+        return user
+          ? Response.redirect(new URL(homeFor(user.role), nextUrl))
+          : false;
+
       if (!user) return false; // → /login?callbackUrl=...
 
       const isStaff = user.role !== "customer";
