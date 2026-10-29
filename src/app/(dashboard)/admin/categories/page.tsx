@@ -1,17 +1,8 @@
-import { ComingSoon, PageHeader } from "@/components/ui/page-header";
+import { CategoriesManager } from "@/components/admin/categories-manager";
+import { listCategoriesWithCounts } from "@/lib/queries/admin";
 
-export const metadata = { title: "Tickets" };
+export const metadata = { title: "Categories" };
 
-export default function TicketsPage() {
-  return (
-    <>
-      <PageHeader
-        title="Categories"
-        description="Every conversation your team is handling."
-      />
-      <ComingSoon step={8}>
-        The ticket list and conversation view will appear here.
-      </ComingSoon>
-    </>
-  );
+export default async function CategoriesPage() {
+  return <CategoriesManager categories={await listCategoriesWithCounts()} />;
 }

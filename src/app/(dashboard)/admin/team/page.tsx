@@ -1,17 +1,10 @@
-import { ComingSoon, PageHeader } from "@/components/ui/page-header";
+import { TeamManager } from "@/components/admin/team-manager";
+import { listTeam } from "@/lib/queries/admin";
+import { requirePageUser } from "@/lib/session";
 
-export const metadata = { title: "Tickets" };
+export const metadata = { title: "Team" };
 
-export default function TicketsPage() {
-  return (
-    <>
-      <PageHeader
-        title="Team"
-        description="Every conversation your team is handling."
-      />
-      <ComingSoon step={8}>
-        The ticket list and conversation view will appear here.
-      </ComingSoon>
-    </>
-  );
+export default async function TeamPage() {
+  const me = await requirePageUser("admin");
+  return <TeamManager members={await listTeam()} meId={me.id} />;
 }
