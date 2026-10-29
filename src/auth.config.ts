@@ -26,6 +26,8 @@ export const authConfig = {
       if (path === "/login") {
         return user ? Response.redirect(new URL(homeFor(user.role), nextUrl)) : true;
       }
+      if (path === "/") return user ? Response.redirect(new URL(homeFor(user.role), nextUrl)) : false;
+      
       if (!user) return false; // → /login?callbackUrl=...
 
       const isStaff = user.role !== "customer";
