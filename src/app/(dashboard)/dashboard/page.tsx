@@ -1,19 +1,15 @@
-import { auth } from "@/auth";
-import { logoutAction } from "@/lib/actions/auth";
+import { ComingSoon, PageHeader } from "@/components/ui/page-header";
 
-export default async function DashboardPage() {
-  const session = await auth();
+export const metadata = { title: "Dashboard" };
+
+export default function DashboardPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-lg font-bold text-slate-900">
-        Welcome, {session?.user.name}
-      </h1>
-      <p className="mt-1 text-sm text-slate-500">Role: {session?.user.role}</p>
-      <form action={logoutAction} className="mt-4">
-        <button className="rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white">
-          Sign out
-        </button>
-      </form>
-    </div>
+    <>
+      <PageHeader
+        title="Dashboard"
+        description="How the queue is doing right now."
+      />
+      <ComingSoon step={7}>Live stats will appear here.</ComingSoon>
+    </>
   );
 }
