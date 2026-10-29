@@ -53,7 +53,7 @@ ticketSchema.pre("validate", async function () {
 
 // Keep resolvedAt in sync with status
 ticketSchema.pre("save", function () {
-  if (!this.isModified("status")) return;
+  if (this.isNew || !this.isModified("status")) return;
   this.resolvedAt = this.status === "resolved" ? new Date() : undefined;
 });
 
@@ -69,6 +69,8 @@ ticketSchema.index({ status: 1, priority: 1, lastMessageAt: -1 });
 ticketSchema.index({ assignee: 1, status: 1 });
 ticketSchema.index({ requester: 1, createdAt: -1 });
 ticketSchema.index({ subject: "text" });
+ticketSchema.index({ createdAt: -1 });
+ticketSchema.index({ resolvedAt: -1 }, { sparse: true });
 
 export const Ticket =
   (mongoose.models.Ticket as Model<ITicket>) ||
