@@ -5,6 +5,8 @@ import {
   SidebarSkeleton,
 } from "@/components/shell/sidebar-loader";
 import { Topbar } from "@/components/shell/topbar";
+import { Toaster } from "@/components/ui/toaster";
+import { QueryProvider } from "@/providers/query-provider";
 
 export default function DashboardLayout({
   children,
@@ -12,18 +14,21 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ShellProvider>
-      <div className="flex min-h-dvh">
-        <Suspense fallback={<SidebarSkeleton />}>
-          <SidebarLoader />
-        </Suspense>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar />
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mx-auto w-full max-w-7xl">{children}</div>
-          </main>
+    <QueryProvider>
+      <ShellProvider>
+        <div className="flex min-h-dvh">
+          <Suspense fallback={<SidebarSkeleton />}>
+            <SidebarLoader />
+          </Suspense>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar />
+            <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+              <div className="mx-auto w-full max-w-7xl">{children}</div>
+            </main>
+          </div>
         </div>
-      </div>
-    </ShellProvider>
+      </ShellProvider>
+      <Toaster />
+    </QueryProvider>
   );
 }
