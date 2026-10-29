@@ -43,8 +43,8 @@ const [amara, jonas] = await User.create([
   ]);
 
   await Ticket.updateOne({ _id: ticket._id }, {
-    messageCount: 3,
-    lastMessageAt: new Date(+t0 + 10 * 60_000),
+    messageCount: 2,
+    lastMessageAt: new Date(+t0 + 9 * 60_000),
     lastMessagePreview: m1.body.slice(0, 120),
     firstResponseAt: new Date(+t0 + 9 * 60_000),
   });
