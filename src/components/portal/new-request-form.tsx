@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, errorMessage } from "@/lib/api-client";
+import {
+  AttachButton,
+  AttachmentChips,
+} from "@/components/ui/attachment-picker";
+import { useAttachments } from "@/hooks/use-attachments";
 
 export function NewRequestForm({
   categories,
@@ -22,6 +27,8 @@ export function NewRequestForm({
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
+  const files = useAttachments();
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
@@ -31,7 +38,12 @@ export function NewRequestForm({
         "/api/tickets",
         {
           method: "POST",
-          body: { subject, body, categoryId: categoryId || null },
+          body: {
+            subject,
+            body,
+            categoryId: categoryId || null,
+            attachments: files.ids,
+          },
         },
       );
       toast.success("Request sent");
@@ -98,6 +110,15 @@ export function NewRequestForm({
           required
         />
       </div>
+      <div>
+        <AttachmentChips controller={files} />
+        <div className="mt-2 flex items-center gap-2">
+          <AttachButton controller={files} />
+          <p className="text-xs text-fg-subtle">
+            Screenshots or PDFs, up to 5 files and 10 MB each.
+          </p>
+        </div>
+      </div>
 
       {error && (
         <p
@@ -111,7 +132,9 @@ export function NewRequestForm({
       <div className="flex justify-end">
         <Button
           type="submit"
-          disabled={pending || subject.trim().length < 3 || !body.trim()}
+          disabled={
+            pending || files.busy || subject.trim().length < 3 || !body.trim()
+          }
         >
           {pending && <Loader2 className="size-4 animate-spin" />}
           Send request

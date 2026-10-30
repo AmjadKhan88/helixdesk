@@ -1,12 +1,12 @@
-import { Paperclip } from "lucide-react";
-import { formatBytes, formatDateTime, timeAgoLong } from "@/lib/time";
+import { formatDateTime, timeAgoLong } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { AttachmentList } from "@/components/ui/attachment-list";
 
 export type ThreadMessage = {
   id: string;
   body: string;
   createdAt: string; // ISO
-  attachments: { name: string; url: string; size: number }[];
+  attachments: { name: string; url: string; size: number; mimeType: string }[];
   author: { id: string; name: string; role: string };
 };
 
@@ -55,27 +55,10 @@ export function PortalThread({
                     : "rounded-tl-sm bg-brand-soft/70",
                 )}
               >
-                <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                {m.attachments.length > 0 && (
-                  <ul className="mt-2.5 flex flex-wrap gap-2">
-                    {m.attachments.map((a) => (
-                      <li key={a.url}>
-                        <a
-                          href={a.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-                        >
-                          <Paperclip className="size-3.5 shrink-0" />
-                          <span className="truncate font-medium">{a.name}</span>
-                          <span className="shrink-0 tabular-nums text-fg-subtle">
-                            {formatBytes(a.size)}
-                          </span>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                {m.body && (
+                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
                 )}
+                <AttachmentList items={m.attachments} />
               </div>
             </article>
           </li>

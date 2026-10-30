@@ -2,8 +2,13 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Lock, Send } from "lucide-react";
+import {
+  AttachButton,
+  AttachmentChips,
+} from "@/components/ui/attachment-picker";
 import { Button } from "@/components/ui/button";
 import { useAddMessage } from "@/hooks/use-tickets";
+import { useAttachments } from "@/hooks/use-attachments";
 import { cn } from "@/lib/utils";
 
 export function Composer({ number }: { number: number }) {
@@ -11,9 +16,13 @@ export function Composer({ number }: { number: number }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const add = useAddMessage(number);
+  const files = useAttachments();
   const note = mode === "note";
+  const canSend =
+    (text.trim().length > 0 || files.ids.length > 0) &&
+    !files.busy &&
+    !add.isPending;
 
-  // Grow with content, up to ~8 lines
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -22,13 +31,13 @@ export function Composer({ number }: { number: number }) {
   }, [text]);
 
   function submit() {
-    const body = text.trim();
-    if (!body || add.isPending) return;
+    if (!canSend) return;
     add.mutate(
-      { body, isInternal: note },
+      { body: text.trim(), isInternal: note, attachments: files.ids },
       {
         onSuccess: () => {
           setText("");
+          files.reset();
           ref.current?.focus();
         },
       },
@@ -76,6 +85,8 @@ export function Composer({ number }: { number: number }) {
           ))}
         </div>
 
+        <AttachmentChips controller={files} />
+
         <textarea
           ref={ref}
           rows={2}
@@ -94,17 +105,15 @@ export function Composer({ number }: { number: number }) {
           className="block w-full resize-none bg-transparent px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
         />
 
-        <div className="flex items-center justify-between gap-3 px-2.5 pb-2.5">
-          <p className="text-xs text-fg-subtle">
-            {note ? "Not visible to the customer." : "Sent to the customer."}{" "}
-            Ctrl or ⌘ + Enter to send.
-          </p>
-          <Button
-            size="sm"
-            onClick={submit}
-            disabled={!text.trim() || add.isPending}
-          >
-            {add.isPending ? (
+        <div className="flex items-center justify-between gap-3 px-2 pb-2">
+          <div className="flex items-center gap-1">
+            <AttachButton controller={files} />
+            <p className="hidden text-xs text-fg-subtle sm:block">
+              {note ? "Not visible to the customer." : "Sent to the customer."}
+            </p>
+          </div>
+          <Button size="sm" onClick={submit} disabled={!canSend}>
+            {add.isPending || files.busy ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <Send className="size-3.5" />

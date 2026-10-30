@@ -6,6 +6,11 @@ import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiFetch, errorMessage } from "@/lib/api-client";
+import {
+  AttachButton,
+  AttachmentChips,
+} from "@/components/ui/attachment-picker";
+import { useAttachments } from "@/hooks/use-attachments";
 
 export function PortalComposer({
   number,
@@ -20,6 +25,9 @@ export function PortalComposer({
   const [sending, setSending] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const busy = sending || refreshing;
+  const files = useAttachments();
+  const canSend =
+    (text.trim().length > 0 || files.ids.length > 0) && !files.busy && !busy;
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -30,15 +38,16 @@ export function PortalComposer({
 
   async function send() {
     const body = text.trim();
-    if (!body || busy) return;
+    if (!canSend) return;
     setSending(true);
     try {
       await apiFetch(`/api/tickets/${number}/messages`, {
         method: "POST",
-        body: { body, isInternal: false },
+        body: { body, isInternal: false, attachments: files.ids },
       });
       setText("");
-      startTransition(() => router.refresh()); // stays "busy" until the new message is on screen
+      files.reset();
+      startTransition(() => router.refresh());
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -54,6 +63,7 @@ export function PortalComposer({
         </p>
       )}
       <div className="rounded-xl border border-line-strong bg-surface transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
+        <AttachmentChips controller={files} />
         <textarea
           ref={ref}
           rows={3}
@@ -70,9 +80,9 @@ export function PortalComposer({
           className="block w-full resize-none bg-transparent px-4 py-3 text-sm text-fg placeholder:text-fg-subtle focus:outline-none"
         />
         <div className="flex items-center justify-between gap-3 px-3 pb-3">
-          <p className="text-xs text-fg-subtle">Ctrl or ⌘ + Enter to send</p>
-          <Button size="sm" onClick={send} disabled={!text.trim() || busy}>
-            {busy ? (
+          <AttachButton controller={files} />
+          <Button size="sm" onClick={send} disabled={!canSend}>
+            {busy || files.busy ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <Send className="size-3.5" />
