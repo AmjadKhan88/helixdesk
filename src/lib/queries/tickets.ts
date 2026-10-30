@@ -12,7 +12,14 @@ import { User } from "@/models/User";
 
 export type Viewer = { id: string; role: Role };
 
-type PersonRef = { _id: Types.ObjectId; name: string; email?: string };
+type PersonRef = {
+  _id: Types.ObjectId;
+  name: string;
+  email?: string;
+  passwordSetAt?: Date;
+  inviteExpiresAt?: Date;
+};
+
 type CategoryRef = { _id: Types.ObjectId; name: string; slug: string };
 type TicketLean = Omit<ITicket, "requester" | "assignee" | "category"> & {
   _id: Types.ObjectId;
@@ -28,7 +35,7 @@ type MessageLean = Omit<IMessage, "author"> & {
 const ACTIVE = { $in: ["open", "in_progress"] };
 
 export const populateTicket = [
-  { path: "requester", select: "name email" },
+  { path: "requester", select: "name email passwordSetAt inviteExpiresAt" },
   { path: "assignee", select: "name email" },
   { path: "category", select: "name slug" },
 ];
@@ -37,7 +44,17 @@ export const populateTicket = [
 
 function person(p: PersonRef | null, withEmail: boolean) {
   if (!p) return null;
-  return { id: String(p._id), name: p.name, email: withEmail ? (p.email ?? null) : null };
+  return {
+    id: String(p._id),
+    name: p.name,
+    email: withEmail ? (p.email ?? null) : null,
+  };
+}
+
+function portalState(p: PersonRef): "active" | "invited" | "none" {
+  if (p.passwordSetAt) return "active";
+  if (p.inviteExpiresAt && +p.inviteExpiresAt > Date.now()) return "invited";
+  return "none";
 }
 
 export function serializeTicket(t: TicketLean, viewerIsStaff: boolean) {
@@ -54,9 +71,17 @@ export function serializeTicket(t: TicketLean, viewerIsStaff: boolean) {
     createdAt: t.createdAt,
     firstResponseAt: t.firstResponseAt ?? null,
     resolvedAt: t.resolvedAt ?? null,
-    requester: person(t.requester, true) ?? { id: "", name: "Deleted user", email: null },
+    requester: t.requester
+      ? { ...person(t.requester, true)!, portal: portalState(t.requester) }
+      : { id: "", name: "Deleted user", email: null, portal: "none" as const },
     assignee: person(t.assignee, viewerIsStaff), // customers don't see agent emails
-    category: t.category ? { id: String(t.category._id), name: t.category.name, slug: t.category.slug } : null,
+    category: t.category
+      ? {
+          id: String(t.category._id),
+          name: t.category.name,
+          slug: t.category.slug,
+        }
+      : null,
   };
 }
 
@@ -82,15 +107,31 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
   const filter: Filter = {};
 
   if (!staff) {
-    filter.requester = me; // customers: only their own tickets, views don't apply
+    filter.requester = me; // customers: only their own tickets
+    if (query.view === "inbox") filter.status = ACTIVE;
+    else if (query.view === "resolved") filter.status = "resolved";
   } else {
     switch (query.view) {
-      case "inbox": filter.status = ACTIVE; break;
-      case "mine": filter.status = ACTIVE; filter.assignee = me; break;
-      case "unassigned": filter.status = ACTIVE; filter.assignee = null; break;
-      case "urgent": filter.status = ACTIVE; filter.priority = "urgent"; break;
-      case "resolved": filter.status = "resolved"; break;
-      case "all": break;
+      case "inbox":
+        filter.status = ACTIVE;
+        break;
+      case "mine":
+        filter.status = ACTIVE;
+        filter.assignee = me;
+        break;
+      case "unassigned":
+        filter.status = ACTIVE;
+        filter.assignee = null;
+        break;
+      case "urgent":
+        filter.status = ACTIVE;
+        filter.priority = "urgent";
+        break;
+      case "resolved":
+        filter.status = "resolved";
+        break;
+      case "all":
+        break;
     }
   }
 
@@ -99,7 +140,9 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
   if (query.priority) filter.priority = query.priority;
 
   if (query.category) {
-    const cat = await Category.findOne({ slug: query.category }).select("_id").lean();
+    const cat = await Category.findOne({ slug: query.category })
+      .select("_id")
+      .lean();
     if (!cat) return emptyPage(query);
     filter.category = cat._id;
   }
@@ -109,15 +152,21 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
     const or: Filter[] = [{ subject: re }];
     const num = /^(?:tck-?)?(\d{3,})$/i.exec(query.q);
     if (num) or.push({ number: Number(num[1]) });
-    const people = await User.find({ $or: [{ name: re }, { email: re }] }).select("_id").limit(50).lean();
-    if (people.length) or.push({ requester: { $in: people.map((p) => p._id) } });
+    const people = await User.find({ $or: [{ name: re }, { email: re }] })
+      .select("_id")
+      .limit(50)
+      .lean();
+    if (people.length)
+      or.push({ requester: { $in: people.map((p) => p._id) } });
     filter.$or = or;
   }
 
   const sort =
-    query.sort === "newest" ? { createdAt: -1 as const }
-    : query.sort === "oldest" ? { createdAt: 1 as const }
-    : { lastMessageAt: -1 as const, _id: -1 as const };
+    query.sort === "newest"
+      ? { createdAt: -1 as const }
+      : query.sort === "oldest"
+        ? { createdAt: 1 as const }
+        : { lastMessageAt: -1 as const, _id: -1 as const };
 
   const [docs, total] = await Promise.all([
     Ticket.find(filter)
@@ -130,7 +179,9 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
   ]);
 
   return {
-    items: (docs as unknown as TicketLean[]).map((t) => serializeTicket(t, staff)),
+    items: (docs as unknown as TicketLean[]).map((t) =>
+      serializeTicket(t, staff),
+    ),
     page: query.page,
     limit: query.limit,
     total,
@@ -139,7 +190,13 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
 }
 
 function emptyPage(query: ListQuery) {
-  return { items: [], page: query.page, limit: query.limit, total: 0, totalPages: 1 };
+  return {
+    items: [],
+    page: query.page,
+    limit: query.limit,
+    total: 0,
+    totalPages: 1,
+  };
 }
 
 // ---------- detail ----------
@@ -150,19 +207,29 @@ export async function getTicketDetail(viewer: Viewer, number: number) {
   const filter: Filter = { number };
   if (!staff) filter.requester = new Types.ObjectId(viewer.id); // not yours = 404, existence isn't leaked
 
-  const ticket = (await Ticket.findOne(filter).populate(populateTicket).lean()) as unknown as TicketLean | null;
+  const ticket = (await Ticket.findOne(filter)
+    .populate(populateTicket)
+    .lean()) as unknown as TicketLean | null;
   if (!ticket) return null;
 
-  const messages = (await Message.find({ ticket: ticket._id, ...(staff ? {} : { isInternal: false }) })
+  const messages = (await Message.find({
+    ticket: ticket._id,
+    ...(staff ? {} : { isInternal: false }),
+  })
     .sort({ createdAt: 1 })
     .limit(500)
     .populate("author", "name role")
     .lean()) as unknown as MessageLean[];
 
-  return { ticket: serializeTicket(ticket, staff), messages: messages.map(serializeMessage) };
+  return {
+    ticket: serializeTicket(ticket, staff),
+    messages: messages.map(serializeMessage),
+  };
 }
 
 export async function getMessage(id: Types.ObjectId) {
-  const m = (await Message.findById(id).populate("author", "name role").lean()) as unknown as MessageLean | null;
+  const m = (await Message.findById(id)
+    .populate("author", "name role")
+    .lean()) as unknown as MessageLean | null;
   return m ? serializeMessage(m) : null;
 }

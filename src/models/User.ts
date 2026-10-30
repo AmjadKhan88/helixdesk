@@ -12,6 +12,7 @@ export interface IUser {
   updatedAt: Date;
   inviteTokenHash?: string;
   inviteExpiresAt?: Date;
+  passwordSetAt?: Date;
 }
 
 interface IUserMethods {
@@ -35,6 +36,7 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     isActive: { type: Boolean, default: true },
     inviteTokenHash: { type: String, select: false },
     inviteExpiresAt: { type: Date },
+    passwordSetAt: { type: Date },
   },
   { timestamps: true },
 );
@@ -42,6 +44,7 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
 userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) return;
   this.password = await bcrypt.hash(this.password, 12);
+  this.passwordSetAt = new Date();
 });
 
 userSchema.methods.comparePassword = function (candidate: string) {

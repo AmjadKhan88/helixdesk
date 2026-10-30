@@ -39,6 +39,7 @@ import { Composer } from "./composer";
 import { MessageThread } from "./message-thread";
 import { PropertyMenu, type MenuOption } from "./property-menu";
 import { DetailSkeleton } from "./skeletons";
+import { PortalInvite } from "./portal-invite";
 
 const STATUS_ICON: Record<TicketStatus, React.ReactNode> = {
   open: <Circle className="size-4 text-brand" />,
@@ -257,6 +258,15 @@ function TicketView({
             >
               {t.requester.email}
             </a>
+          )}
+          {t.requester.id && t.requester.portal !== "active" && (
+            <PortalInvite
+              contact={{
+                id: t.requester.id,
+                name: t.requester.name,
+                portal: t.requester.portal,
+              }}
+            />
           )}
           <time
             dateTime={t.createdAt}

@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/select";
 import { apiFetch, errorMessage } from "@/lib/api-client";
 import type { Member, MemberState } from "@/lib/queries/admin";
 import { cn } from "@/lib/utils";
+import { InviteLinkPanel } from "@/components/admin/invite-link-panel";
 
 const STATE_BADGE: Record<
   MemberState,
@@ -229,7 +230,9 @@ export function TeamManager({
 
       <Dialog open={!!link} onOpenChange={(o) => !o && setLink(null)}>
         <DialogContent title="Invite link ready" className="max-w-md">
-          {link && <LinkPanel info={link} onClose={() => setLink(null)} />}
+          {link && (
+            <InviteLinkPanel info={link} onClose={() => setLink(null)} />
+          )}
         </DialogContent>
       </Dialog>
 

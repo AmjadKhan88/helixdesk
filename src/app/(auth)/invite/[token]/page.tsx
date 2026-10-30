@@ -32,7 +32,14 @@ async function InviteLoader({
       </>
     );
   }
-  return <InviteForm token={token} name={invite.name} email={invite.email} />;
+  return (
+    <InviteForm
+      token={token}
+      name={invite.name}
+      email={invite.email}
+      role={invite.role}
+    />
+  );
 }
 
 export default function InvitePage({

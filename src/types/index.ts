@@ -16,12 +16,17 @@ export type TicketItem = {
   createdAt: string;
   firstResponseAt: string | null;
   resolvedAt: string | null;
-  requester: Person;
   assignee: Person | null;
   category: CategoryRef | null;
+  requester: Person & { portal: "active" | "invited" | "none" };
 };
 
-export type Attachment = { name: string; url: string; size: number; mimeType: string };
+export type Attachment = {
+  name: string;
+  url: string;
+  size: number;
+  mimeType: string;
+};
 
 export type MessageItem = {
   id: string;
@@ -33,6 +38,22 @@ export type MessageItem = {
 };
 
 export type TicketDetailData = { ticket: TicketItem; messages: MessageItem[] };
-export type TicketPage = { items: TicketItem[]; page: number; limit: number; total: number; totalPages: number };
-export type StaffMember = { id: string; name: string; email: string; role: Role };
-export type CategoryOption = { id: string; name: string; slug: string; description: string | null };
+export type TicketPage = {
+  items: TicketItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+export type StaffMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+};
+export type CategoryOption = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+};

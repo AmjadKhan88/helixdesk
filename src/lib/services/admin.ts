@@ -182,3 +182,19 @@ export async function updateSettings(firstResponseTargetMinutes: number) {
     { upsert: true, setDefaultsOnInsert: true },
   );
 }
+
+/** Staff issue a set-password link so a customer contact can use the portal */
+export async function inviteContact(id: string) {
+  await connectDB();
+  const user = await User.findById(id);
+  if (!user || user.role !== "customer" || !user.isActive)
+    throw new ApiError(404, "Contact not found");
+  if (user.passwordSetAt)
+    throw new ApiError(400, "This customer already has portal access.");
+
+  const invite = createInvite();
+  user.inviteTokenHash = invite.hash;
+  user.inviteExpiresAt = invite.expiresAt;
+  await user.save();
+  return invite.token;
+}

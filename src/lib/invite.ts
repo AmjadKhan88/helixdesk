@@ -27,6 +27,6 @@ export async function findInvite(token: string) {
     inviteExpiresAt: { $gt: new Date() },
     isActive: true,
   })
-    .select("name email")
+    .select("name email role")
     .lean();
 }

@@ -10,10 +10,12 @@ export function InviteForm({
   token,
   name,
   email,
+  role,
 }: {
   token: string;
   name: string;
   email: string;
+  role: string;
 }) {
   const [error, formAction, pending] = useActionState(
     acceptInviteAction,
@@ -29,7 +31,10 @@ export function InviteForm({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">
           Choose a password for{" "}
-          <span className="font-medium text-fg">{email}</span> to join the team.
+          <span className="font-medium text-fg">{email}</span>{" "}
+          {role === "customer"
+            ? "to follow your support requests."
+            : "to join the team."}
         </p>
       </div>
 
