@@ -3,7 +3,7 @@ import mongoose, { Schema, Types, type Model } from "mongoose";
 export interface IAttachment {
   name: string;
   url: string;
-  size: number;      // bytes
+  size: number; // bytes
   mimeType: string;
 }
 
@@ -24,18 +24,29 @@ const attachmentSchema = new Schema<IAttachment>(
     size: { type: Number, required: true },
     mimeType: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const messageSchema = new Schema<IMessage>(
   {
     ticket: { type: Schema.Types.ObjectId, ref: "Ticket", required: true },
     author: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    body: { type: String, required: true, trim: true, maxlength: 10000 },
+    body: {
+      type: String,
+      trim: true,
+      maxlength: 10000,
+      default: "",
+      required: [
+        function (this: { attachments?: unknown[] }) {
+          return !this.attachments?.length;
+        },
+        "A message needs text or an attachment",
+      ],
+    },
     isInternal: { type: Boolean, default: false },
     attachments: { type: [attachmentSchema], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 messageSchema.index({ ticket: 1, createdAt: 1 });

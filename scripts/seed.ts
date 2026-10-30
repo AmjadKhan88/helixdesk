@@ -9,18 +9,36 @@ import { Counter } from "@/models/Counter";
 async function seed() {
   await connectDB();
   await Promise.all([
-    User.deleteMany({}), Category.deleteMany({}),
-    Ticket.deleteMany({}), Message.deleteMany({}), Counter.deleteMany({}),
+    User.deleteMany({}),
+    Category.deleteMany({}),
+    Ticket.deleteMany({}),
+    Message.deleteMany({}),
+    Counter.deleteMany({}),
   ]);
 
-const [amara, jonas] = await User.create([
-  { name: "Amjad ullah", email: "amjadfast87@gmail.com", password: "admin@890", role: "admin" },
-  { name: "Kashif ullah", email: "kashif@gmail.com", password: "kashif@890", role: "customer" },
-  { name: "Bilal Ahmad", email: "bilalahmad@gmail.com", password: "bilal@890", role: "agent" },
-]);
+  const [amara, jonas] = await User.create([
+    {
+      name: "Amjad ullah",
+      email: "amjadfast87@gmail.com",
+      password: "admin@890",
+      role: "admin",
+    },
+    {
+      name: "Kashif ullah",
+      email: "kashif@gmail.com",
+      password: "kashif@890",
+      role: "customer",
+    },
+    {
+      name: "Bilal Ahmad",
+      email: "bilalahmad@gmail.com",
+      password: "bilal@890",
+      role: "agent",
+    },
+  ]);
 
   const [billing] = await Category.create(
-    ["Billing", "Bug", "Account", "API"].map((name) => ({ name }))
+    ["Billing", "Bug", "Account", "API"].map((name) => ({ name })),
   );
 
   const ticket = await Ticket.create({
@@ -33,25 +51,45 @@ const [amara, jonas] = await User.create([
 
   const t0 = new Date();
   const [m1] = await Message.create([
-    { ticket: ticket._id, author: jonas._id, createdAt: t0,
+    {
+      ticket: ticket._id,
+      author: jonas._id,
+      createdAt: t0,
       body: 'Hi team — I\'m getting a 403 error every time I click "Manage plan" in settings.',
-      attachments: [{ name: "error-403.png", url: "/uploads/error-403.png", size: 248000, mimeType: "image/png" }] },
-    { ticket: ticket._id, author: amara._id, createdAt: new Date(+t0 + 9 * 60_000),
-      body: "Thanks Jonas — I can reproduce this. Clearing the permissions cache now." },
-    { ticket: ticket._id, author: amara._id, isInternal: true, createdAt: new Date(+t0 + 10 * 60_000),
-      body: "Checked Redis — perm cache key was stale. Flushing." },
+    },
+    {
+      ticket: ticket._id,
+      author: amara._id,
+      createdAt: new Date(+t0 + 9 * 60_000),
+      body: "Thanks Jonas — I can reproduce this. Clearing the permissions cache now.",
+    },
+    {
+      ticket: ticket._id,
+      author: amara._id,
+      isInternal: true,
+      createdAt: new Date(+t0 + 10 * 60_000),
+      body: "Checked Redis — perm cache key was stale. Flushing.",
+    },
   ]);
 
-  await Ticket.updateOne({ _id: ticket._id }, {
-    messageCount: 2,
-    lastMessageAt: new Date(+t0 + 9 * 60_000),
-    lastMessagePreview: m1.body.slice(0, 120),
-    firstResponseAt: new Date(+t0 + 9 * 60_000),
-  });
+  await Ticket.updateOne(
+    { _id: ticket._id },
+    {
+      messageCount: 2,
+      lastMessageAt: new Date(+t0 + 9 * 60_000),
+      lastMessagePreview: m1.body.slice(0, 120),
+      firstResponseAt: new Date(+t0 + 9 * 60_000),
+    },
+  );
 
-  const saved = await Ticket.findById(ticket._id).populate("requester assignee category");
+  const saved = await Ticket.findById(ticket._id).populate(
+    "requester assignee category",
+  );
   console.log("Seeded:", saved?.toJSON());
   await mongoose.disconnect();
 }
 
-seed().catch((e) => { console.error(e); process.exit(1); });
+seed().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

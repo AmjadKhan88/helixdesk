@@ -2,19 +2,16 @@ import { z } from "zod";
 import { TICKET_PRIORITIES, TICKET_STATUSES } from "@/lib/constants";
 
 export const objectId = z.string().regex(/^[0-9a-f]{24}$/i, "Invalid id");
-
-export const TICKET_VIEWS = ["inbox", "mine", "unassigned", "urgent", "resolved", "all"] as const;
-
-// Only https or our own /uploads/ paths. This blocks javascript: URLs from ever being stored.
-const attachmentSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  url: z
-    .string()
-    .max(2000)
-    .refine((u) => u.startsWith("https://") || u.startsWith("/uploads/"), "Attachment URL must be https or /uploads/"),
-  size: z.number().int().nonnegative().max(25 * 1024 * 1024),
-  mimeType: z.string().max(100),
-});
+import { MAX_FILES } from "@/lib/uploads";
+export const TICKET_VIEWS = [
+  "inbox",
+  "mine",
+  "unassigned",
+  "urgent",
+  "resolved",
+  "all",
+] as const;
+const attachmentIds = z.array(objectId).max(MAX_FILES).default([]);
 
 export const listQuerySchema = z.object({
   view: z.enum(TICKET_VIEWS).default("inbox"),
@@ -29,7 +26,11 @@ export const listQuerySchema = z.object({
 export type ListQuery = z.infer<typeof listQuerySchema>;
 
 export const createTicketSchema = z.object({
-  subject: z.string().trim().min(3, "Subject must be at least 3 characters").max(200),
+  subject: z
+    .string()
+    .trim()
+    .min(3, "Subject must be at least 3 characters")
+    .max(200),
   body: z.string().trim().min(1, "Describe the issue").max(10000),
   priority: z.enum(TICKET_PRIORITIES).default("low"), // ignored for customers
   categoryId: objectId.nullish(),
@@ -40,7 +41,7 @@ export const createTicketSchema = z.object({
       name: z.string().trim().min(1).max(100).optional(),
     })
     .optional(),
-  attachments: z.array(attachmentSchema).max(10).default([]),
+  attachments: attachmentIds,
 });
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 
@@ -55,9 +56,14 @@ export const updateTicketSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
-export const createMessageSchema = z.object({
-  body: z.string().trim().min(1, "Write a reply").max(10000),
-  isInternal: z.boolean().default(false), // ignored for customers
-  attachments: z.array(attachmentSchema).max(10).default([]),
-});
+export const createMessageSchema = z
+  .object({
+    body: z.string().trim().max(10000).default(""),
+    isInternal: z.boolean().default(false), // ignored for customers
+    attachments: attachmentIds,
+  })
+  .refine((v) => v.body.length > 0 || v.attachments.length > 0, {
+    message: "Write a reply or attach a file",
+    path: ["body"],
+  });
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;
