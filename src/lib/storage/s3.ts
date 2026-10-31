@@ -30,10 +30,14 @@ export function createS3Driver(): StorageDriver {
   });
 
   return {
-    presignPut: (Key, ContentType) =>
-      getSignedUrl(client, new PutObjectCommand({ Bucket, Key, ContentType }), {
-        expiresIn: 600,
-      }),
+    prepareUpload: async (Key, ContentType) => ({
+      method: "PUT" as const,
+      url: await getSignedUrl(
+        client,
+        new PutObjectCommand({ Bucket, Key, ContentType }),
+        { expiresIn: 600 },
+      ),
+    }),
 
     async put(Key, Body, ContentType) {
       await client.send(

@@ -28,15 +28,18 @@ export const POST = route(
       throw new ApiError(400, message);
     };
 
+    // 1) The stored size must match what was declared
     const head = await store.head(upload.key);
     if (!head) return reject("The upload did not finish. Please try again.");
-    if (head.size !== upload.size || head.size > MAX_BYTES)
+    if (head.size !== upload.size || head.size > MAX_BYTES) {
       return reject("The uploaded file does not match what was declared.");
+    }
 
-    const detected = sniffType(
-      (await store.readHead(upload.key, 16)) ?? new Uint8Array(),
-    );
-    if (detected !== upload.mimeType) {
+    // 2) The real contents must match the declared type
+    const bytes = await store.readHead(upload.key, 16);
+    if (!bytes)
+      return reject("We could not verify the uploaded file. Please try again.");
+    if (sniffType(bytes) !== upload.mimeType) {
       return reject(
         "This file's contents do not match its type. Only PNG, JPEG, GIF, WebP, or PDF files are allowed.",
       );

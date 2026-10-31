@@ -11,7 +11,7 @@ export const PUT = route(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireRole();
     const store = getStorage();
-    if (store.presignPut)
+    if (store.prepareUpload)
       throw new ApiError(400, "This storage accepts direct uploads only.");
 
     await connectDB();

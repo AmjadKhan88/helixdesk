@@ -5,8 +5,13 @@ import { ApiError, readJson, route } from "@/lib/api";
 import { connectDB } from "@/lib/db";
 import { getStorage } from "@/lib/storage";
 import { requireRole } from "@/lib/session";
-import { ALLOWED_MIME, MAX_BYTES, cleanName } from "@/lib/uploads";
 import { Upload } from "@/models/Upload";
+import {
+  ALLOWED_MIME,
+  MAX_BYTES,
+  cleanName,
+  extensionFor,
+} from "@/lib/uploads";
 
 const initSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -37,7 +42,7 @@ export const POST = route(async (req: NextRequest) => {
       "Too many uploads in progress. Try again in a bit.",
     );
 
-  const key = randomUUID();
+  const key = `${randomUUID()}.${extensionFor(input.mimeType)}`;
   const upload = await Upload.create({
     key,
     name: cleanName(input.name),
@@ -47,12 +52,9 @@ export const POST = route(async (req: NextRequest) => {
   });
 
   const store = getStorage();
-  const uploadUrl = store.presignPut
-    ? await store.presignPut(key, input.mimeType, input.size)
-    : `/api/uploads/${upload._id}/content`; // local disk: the app receives the bytes
+  const target = store.prepareUpload
+    ? await store.prepareUpload(key, input.mimeType, input.size)
+    : { method: "PUT" as const, url: `/api/uploads/${upload._id}/content` }; // local disk: the app receives the bytes
 
-  return NextResponse.json(
-    { id: String(upload._id), uploadUrl },
-    { status: 201 },
-  );
+  return NextResponse.json({ id: String(upload._id), target }, { status: 201 });
 });

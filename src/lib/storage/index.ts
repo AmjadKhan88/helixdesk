@@ -1,3 +1,4 @@
+import { createCloudinaryDriver } from "./cloudinary";
 import { createLocalDriver } from "./local";
 import { createS3Driver } from "./s3";
 import type { StorageDriver } from "./types";
@@ -5,9 +6,17 @@ import type { StorageDriver } from "./types";
 let driver: StorageDriver | undefined;
 
 export function getStorage() {
-  driver ??=
-    process.env.STORAGE_DRIVER === "s3"
-      ? createS3Driver()
-      : createLocalDriver();
+  if (!driver) {
+    switch (process.env.STORAGE_DRIVER) {
+      case "s3":
+        driver = createS3Driver();
+        break;
+      case "cloudinary":
+        driver = createCloudinaryDriver();
+        break;
+      default:
+        driver = createLocalDriver();
+    }
+  }
   return driver;
 }

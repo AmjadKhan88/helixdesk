@@ -1,7 +1,9 @@
 import mongoose, { Schema, Types, type Model } from "mongoose";
 import {
-  TICKET_PRIORITIES, TICKET_STATUSES,
-  type TicketPriority, type TicketStatus,
+  TICKET_PRIORITIES,
+  TICKET_STATUSES,
+  type TicketPriority,
+  type TicketStatus,
 } from "@/lib/constants";
 import { Counter } from "./Counter";
 
@@ -37,7 +39,7 @@ const ticketSchema = new Schema<ITicket>(
     firstResponseAt: Date,
     resolvedAt: Date,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Auto-increment ticket number (first ticket = 1001)
@@ -46,7 +48,7 @@ ticketSchema.pre("validate", async function () {
   const counter = await Counter.findOneAndUpdate(
     { _id: "ticket" },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true }
+    { new: true, upsert: true },
   );
   this.number = 1000 + counter.seq;
 });
