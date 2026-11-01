@@ -1,32 +1,62 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { Lock } from "lucide-react";
+import { AttachmentList } from "@/components/ui/attachment-list";
 import { Avatar } from "@/components/ui/avatar";
+import { describeActivity } from "@/lib/activity";
 import { formatDateTime, timeAgoLong } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type { MessageItem } from "@/types";
-import { AttachmentList } from "../ui/attachment-list";
+import type { ActivityItem, MessageItem } from "@/types";
 
-export function MessageThread({ messages }: { messages: MessageItem[] }) {
+type Entry =
+  | { kind: "message"; at: string; message: MessageItem }
+  | { kind: "activity"; at: string; activity: ActivityItem };
+
+export function MessageThread({
+  messages,
+  activity = [],
+}: {
+  messages: MessageItem[];
+  activity?: ActivityItem[];
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Jump to the newest message when the thread loads or grows
+  // One chronological stream: what was said, and what changed
+  const entries = useMemo<Entry[]>(
+    () =>
+      [
+        ...messages.map(
+          (message): Entry => ({
+            kind: "message",
+            at: message.createdAt,
+            message,
+          }),
+        ),
+        ...activity.map(
+          (a): Entry => ({ kind: "activity", at: a.createdAt, activity: a }),
+        ),
+      ].sort((x, y) => +new Date(x.at) - +new Date(y.at)),
+    [messages, activity],
+  );
+
   useLayoutEffect(() => {
     const el = ref.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
+  }, [entries.length]);
 
   return (
     <div
       ref={ref}
-      className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-canvas/50 px-4 py-5 sm:px-5"
+      className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-canvas/50 px-4 py-5 sm:px-5"
     >
-      {messages.map((m) =>
-        m.isInternal ? (
-          <InternalNote key={m.id} m={m} />
+      {entries.map((e) =>
+        e.kind === "activity" ? (
+          <ActivityRow key={`a-${e.activity.id}`} a={e.activity} />
+        ) : e.message.isInternal ? (
+          <InternalNote key={e.message.id} m={e.message} />
         ) : (
-          <Message key={m.id} m={m} />
+          <Message key={e.message.id} m={e.message} />
         ),
       )}
     </div>
@@ -42,6 +72,26 @@ function Time({ iso }: { iso: string }) {
     >
       {timeAgoLong(iso)}
     </time>
+  );
+}
+
+function ActivityRow({ a }: { a: ActivityItem }) {
+  return (
+    <div className="flex items-center gap-2.5 py-0.5 pl-1.5 text-[13px] text-fg-muted">
+      <span
+        aria-hidden
+        className="size-1.5 shrink-0 rounded-full bg-line-strong"
+      />
+      <p className="min-w-0">
+        <span className="font-medium text-fg">
+          {a.actor?.name ?? "Someone"}
+        </span>{" "}
+        {describeActivity(a)}
+      </p>
+      <span className="shrink-0">
+        <Time iso={a.createdAt} />
+      </span>
+    </div>
   );
 }
 

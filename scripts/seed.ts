@@ -5,6 +5,7 @@ import { Category } from "@/models/Category";
 import { Ticket } from "@/models/Ticket";
 import { Message } from "@/models/Message";
 import { Counter } from "@/models/Counter";
+import { Activity } from "@/models/Activity";
 
 async function seed() {
   await connectDB();
@@ -14,6 +15,7 @@ async function seed() {
     Ticket.deleteMany({}),
     Message.deleteMany({}),
     Counter.deleteMany({}),
+    Activity.deleteMany({}),
   ]);
 
   const [amara, jonas] = await User.create([

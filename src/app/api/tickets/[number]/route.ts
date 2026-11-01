@@ -9,7 +9,10 @@ type Ctx = { params: Promise<{ number: string }> };
 
 export const GET = route(async (_req: NextRequest, { params }: Ctx) => {
   const user = await requireRole();
-  const detail = await getTicketDetail(user, parseTicketRef((await params).number));
+  const detail = await getTicketDetail(
+    user,
+    parseTicketRef((await params).number),
+  );
   if (!detail) throw new ApiError(404, "Ticket not found");
   return NextResponse.json(detail);
 });
@@ -17,7 +20,7 @@ export const GET = route(async (_req: NextRequest, { params }: Ctx) => {
 export const PATCH = route(async (req: NextRequest, { params }: Ctx) => {
   const user = await requireRole("admin", "agent");
   const number = parseTicketRef((await params).number);
-  await updateTicket(number, await readJson(req, updateTicketSchema));
+  await updateTicket(user.id, number, await readJson(req, updateTicketSchema));
   const detail = await getTicketDetail(user, number);
   return NextResponse.json({ ticket: detail?.ticket });
 });

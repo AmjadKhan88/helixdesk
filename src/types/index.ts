@@ -37,7 +37,11 @@ export type MessageItem = {
   author: { id: string; name: string; role: Role };
 };
 
-export type TicketDetailData = { ticket: TicketItem; messages: MessageItem[] };
+export type TicketDetailData = {
+  ticket: TicketItem;
+  messages: MessageItem[];
+  activity: ActivityItem[];
+};
 export type TicketPage = {
   items: TicketItem[];
   page: number;
@@ -56,4 +60,15 @@ export type CategoryOption = {
   name: string;
   slug: string;
   description: string | null;
+};
+
+export type ActivityItem = {
+  id: string;
+  type: "created" | "status" | "priority" | "assignee" | "category" | "subject";
+  from: string | null;
+  to: string | null;
+  fromLabel: string | null;
+  toLabel: string | null;
+  createdAt: string;
+  actor: { id: string; name: string } | null;
 };

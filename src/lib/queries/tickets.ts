@@ -9,6 +9,12 @@ import { Category } from "@/models/Category";
 import { Message, type IMessage } from "@/models/Message";
 import { Ticket, type ITicket } from "@/models/Ticket";
 import { User } from "@/models/User";
+import { Activity, type IActivity } from "@/models/Activity";
+
+type ActivityLean = Omit<IActivity, "actor"> & {
+  _id: Types.ObjectId;
+  actor: { _id: Types.ObjectId; name: string } | null;
+};
 
 export type Viewer = { id: string; role: Role };
 
@@ -39,6 +45,19 @@ export const populateTicket = [
   { path: "assignee", select: "name email" },
   { path: "category", select: "name slug" },
 ];
+
+export function serializeActivity(a: ActivityLean) {
+  return {
+    id: String(a._id),
+    type: a.type,
+    from: a.from,
+    to: a.to,
+    fromLabel: a.fromLabel,
+    toLabel: a.toLabel,
+    createdAt: a.createdAt,
+    actor: a.actor ? { id: String(a.actor._id), name: a.actor.name } : null,
+  };
+}
 
 // ---------- serializers (the shape the UI receives) ----------
 
@@ -221,9 +240,19 @@ export async function getTicketDetail(viewer: Viewer, number: number) {
     .populate("author", "name role")
     .lean()) as unknown as MessageLean[];
 
+  // History is staff-only: customers don't see who was assigned or when
+  const activity = staff
+    ? ((await Activity.find({ ticket: ticket._id })
+        .sort({ createdAt: 1, _id: 1 })
+        .limit(300)
+        .populate("actor", "name")
+        .lean()) as unknown as ActivityLean[])
+    : [];
+
   return {
     ticket: serializeTicket(ticket, staff),
     messages: messages.map(serializeMessage),
+    activity: activity.map(serializeActivity),
   };
 }
 

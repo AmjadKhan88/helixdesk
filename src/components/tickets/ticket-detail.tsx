@@ -34,7 +34,7 @@ import {
   useTicket,
   useUpdateTicket,
 } from "@/hooks/use-tickets";
-import type { TicketItem } from "@/types";
+import type { TicketItem, ActivityItem } from "@/types";
 import { Composer } from "./composer";
 import { MessageThread } from "./message-thread";
 import { PropertyMenu, type MenuOption } from "./property-menu";
@@ -87,6 +87,7 @@ export function TicketDetail({ number }: { number: number }) {
       key={number}
       ticket={data.ticket}
       messages={data.messages}
+      activity={data.activity ?? []}
       backHref={backHref}
     />
   );
@@ -96,10 +97,12 @@ function TicketView({
   ticket: t,
   messages,
   backHref,
+  activity,
 }: {
   ticket: TicketItem;
   messages: React.ComponentProps<typeof MessageThread>["messages"];
   backHref: string;
+  activity: ActivityItem[];
 }) {
   const update = useUpdateTicket(t.number);
   const staff = useStaff();
@@ -305,7 +308,7 @@ function TicketView({
         </div>
       </header>
 
-      <MessageThread messages={messages} />
+      <MessageThread messages={messages} activity={activity} />
       <Composer number={t.number} />
     </div>
   );

@@ -18,6 +18,12 @@ import {
   notifyResolved,
   notifyStaffOfReply,
 } from "@/lib/notifications";
+import {
+  categoryName,
+  logActivity,
+  userName,
+  type ActivityInput,
+} from "./activity";
 
 const previewOf = (body: string, hasFiles = false) =>
   body.replace(/\s+/g, " ").trim().slice(0, 120) ||
@@ -159,15 +165,41 @@ export async function createTicket(viewer: Viewer, input: CreateTicketInput) {
     await Ticket.deleteOne({ _id: ticket._id });
     throw err;
   }
+
+  await logActivity([
+    { ticket: ticket._id, actor: viewer.id, type: "created" },
+    ...(assignee
+      ? [
+          {
+            ticket: ticket._id,
+            actor: viewer.id,
+            type: "assignee" as const,
+            to: String(assignee),
+            toLabel: await userName(assignee),
+          },
+        ]
+      : []),
+  ]);
   return ticket.number;
 }
 
-export async function updateTicket(number: number, patch: UpdateTicketInput) {
+export async function updateTicket(
+  actorId: string,
+  number: number,
+  patch: UpdateTicketInput,
+) {
   await connectDB();
   const ticket = await Ticket.findOne({ number });
   if (!ticket) throw new ApiError(404, "Ticket not found");
 
-  const before = ticket.status;
+  const snapshot = () => ({
+    status: ticket.status as string,
+    priority: ticket.priority as string,
+    subject: ticket.subject,
+    assignee: ticket.assignee ? String(ticket.assignee) : null,
+    category: ticket.category ? String(ticket.category) : null,
+  });
+  const before = snapshot();
 
   if (patch.subject !== undefined) ticket.subject = patch.subject;
   if (patch.status !== undefined) ticket.status = patch.status;
@@ -180,9 +212,51 @@ export async function updateTicket(number: number, patch: UpdateTicketInput) {
     ticket.category = patch.categoryId
       ? await assertCategory(patch.categoryId)
       : null;
+  await ticket.save(); // runs the hook that keeps resolvedAt in sync
 
-  await ticket.save(); // save() runs the hook that keeps resolvedAt in sync with status
-  if (patch.status === "resolved" && before !== "resolved") {
+  // Only real changes become history
+  const after = snapshot();
+  const base = { ticket: ticket._id, actor: actorId };
+  const events: ActivityInput[] = [];
+  if (after.status !== before.status)
+    events.push({
+      ...base,
+      type: "status",
+      from: before.status,
+      to: after.status,
+    });
+  if (after.priority !== before.priority)
+    events.push({
+      ...base,
+      type: "priority",
+      from: before.priority,
+      to: after.priority,
+    });
+  if (after.subject !== before.subject)
+    events.push({ ...base, type: "subject" });
+  if (after.assignee !== before.assignee) {
+    events.push({
+      ...base,
+      type: "assignee",
+      from: before.assignee,
+      to: after.assignee,
+      fromLabel: await userName(before.assignee),
+      toLabel: await userName(after.assignee),
+    });
+  }
+  if (after.category !== before.category) {
+    events.push({
+      ...base,
+      type: "category",
+      from: before.category,
+      to: after.category,
+      fromLabel: await categoryName(before.category),
+      toLabel: await categoryName(after.category),
+    });
+  }
+  await logActivity(events);
+
+  if (after.status === "resolved" && before.status !== "resolved") {
     notifyResolved({
       ticketNumber: ticket.number,
       subject: ticket.subject,
@@ -254,6 +328,29 @@ export async function addMessage(
         files: uploads.length,
       });
     }
+
+    const base = { ticket: ticket._id, actor: viewer.id };
+    const events: ActivityInput[] = [];
+    if (!staff && ticket.status === "resolved")
+      events.push({ ...base, type: "status", from: "resolved", to: "open" });
+    if (staff) {
+      if (!ticket.assignee)
+        events.push({
+          ...base,
+          type: "assignee",
+          from: null,
+          to: viewer.id,
+          toLabel: await userName(viewer.id),
+        });
+      if (ticket.status === "open")
+        events.push({
+          ...base,
+          type: "status",
+          from: "open",
+          to: "in_progress",
+        });
+    }
+    await logActivity(events);
   }
 
   return getMessage(message._id);
