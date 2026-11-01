@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 .uploads
+
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+.uploads-e2e
