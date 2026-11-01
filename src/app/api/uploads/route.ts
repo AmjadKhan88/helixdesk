@@ -12,6 +12,7 @@ import {
   cleanName,
   extensionFor,
 } from "@/lib/uploads";
+import { enforceLimit } from "@/lib/rate-limit";
 
 const initSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -27,6 +28,13 @@ const initSchema = z.object({
 
 export const POST = route(async (req: NextRequest) => {
   const user = await requireRole();
+  await enforceLimit(
+    "upload",
+    user.id,
+    60,
+    3600,
+    "Too many uploads. Try again later.",
+  );
   const input = await readJson(req, initSchema);
   await connectDB();
 

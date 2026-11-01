@@ -6,11 +6,16 @@ import { homeFor } from "@/lib/constants";
 import { connectDB } from "@/lib/db";
 import { hashToken } from "@/lib/invite";
 import { User } from "@/models/User";
+import { clientIp } from "@/lib/ip";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function acceptInviteAction(
   _prev: string | undefined,
   formData: FormData,
 ) {
+  if (!(await rateLimit("accept-invite", await clientIp(), 20, 3600)).ok)
+    return "Too many attempts. Please try again later.";
+
   const token = String(formData.get("token") ?? "");
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");

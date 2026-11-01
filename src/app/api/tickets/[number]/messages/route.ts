@@ -3,12 +3,18 @@ import { parseTicketRef, readJson, route } from "@/lib/api";
 import { addMessage } from "@/lib/services/tickets";
 import { requireRole } from "@/lib/session";
 import { createMessageSchema } from "@/lib/validations/ticket";
+import { enforceLimit } from "@/lib/rate-limit";
 
 type Ctx = { params: Promise<{ number: string }> };
 
 export const POST = route(async (req: NextRequest, { params }: Ctx) => {
   const user = await requireRole();
+  await enforceLimit("message", user.id, 40, 300);
   const number = parseTicketRef((await params).number);
-  const message = await addMessage(user, number, await readJson(req, createMessageSchema));
+  const message = await addMessage(
+    user,
+    number,
+    await readJson(req, createMessageSchema),
+  );
   return NextResponse.json({ message }, { status: 201 });
 });
