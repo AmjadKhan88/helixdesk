@@ -1,6 +1,6 @@
 import "server-only";
 import { Types } from "mongoose";
-import { ApiError } from "@/lib/api";
+import { ApiError, type Filter } from "@/lib/api";
 import { connectDB } from "@/lib/db";
 import { createInvite } from "@/lib/invite";
 import type {
@@ -13,7 +13,7 @@ import { Settings } from "@/models/Settings";
 import { Ticket } from "@/models/Ticket";
 import { User } from "@/models/User";
 
-const ACTIVE = { $in: ["open", "in_progress"] };
+const ACTIVE: Filter = { $in: ["open", "in_progress"] };
 
 // ---------- categories ----------
 

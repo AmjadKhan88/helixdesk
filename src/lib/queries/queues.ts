@@ -1,6 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { Ticket } from "@/models/Ticket";
-
+import type { Filter } from "@/lib/api";
 export type QueueCounts = {
   inbox: number;
   mine: number;
@@ -11,7 +11,7 @@ export type QueueCounts = {
 
 export async function getQueueCounts(userId: string): Promise<QueueCounts> {
   await connectDB();
-  const active = { status: { $in: ["open", "in_progress"] } };
+  const active: Filter = { status: { $in: ["open", "in_progress"] } };
 
   const [inbox, mine, unassigned, urgent, groups] = await Promise.all([
     Ticket.countDocuments(active),
@@ -25,5 +25,11 @@ export async function getQueueCounts(userId: string): Promise<QueueCounts> {
   ]);
 
   const n = (p: string) => groups.find((g) => g._id === p)?.n ?? 0;
-  return { inbox, mine, unassigned, urgent, mix: { urgent: n("urgent"), high: n("high"), low: n("low") } };
+  return {
+    inbox,
+    mine,
+    unassigned,
+    urgent,
+    mix: { urgent: n("urgent"), high: n("high"), low: n("low") },
+  };
 }

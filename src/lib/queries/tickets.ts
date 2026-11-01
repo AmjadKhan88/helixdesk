@@ -161,7 +161,7 @@ export async function listTickets(viewer: Viewer, query: ListQuery) {
     filter.$or = or;
   }
 
-  const sort =
+  const sort: Record<string, 1 | -1> =
     query.sort === "newest"
       ? { createdAt: -1 as const }
       : query.sort === "oldest"
