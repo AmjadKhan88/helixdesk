@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/lib/actions/auth";
+import Link from "next/link";
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const [error, formAction, pending] = useActionState(loginAction, undefined);
@@ -54,6 +55,20 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
         {pending && <Loader2 className="size-4 animate-spin" />}
         Sign in
       </Button>
+      <div className="flex items-center justify-between text-[13px]">
+        <Link
+          href="/forgot-password"
+          className="font-medium text-brand-ink hover:underline"
+        >
+          Forgot password?
+        </Link>
+        <Link
+          href="/signup"
+          className="text-fg-muted hover:text-fg hover:underline"
+        >
+          Create an account
+        </Link>
+      </div>
     </form>
   );
 }
