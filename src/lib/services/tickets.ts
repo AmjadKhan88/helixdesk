@@ -13,6 +13,11 @@ import { Message } from "@/models/Message";
 import { Ticket } from "@/models/Ticket";
 import { User } from "@/models/User";
 import { Upload } from "@/models/Upload";
+import {
+  notifyCustomerOfReply,
+  notifyResolved,
+  notifyStaffOfReply,
+} from "@/lib/notifications";
 
 const previewOf = (body: string, hasFiles = false) =>
   body.replace(/\s+/g, " ").trim().slice(0, 120) ||
@@ -162,6 +167,8 @@ export async function updateTicket(number: number, patch: UpdateTicketInput) {
   const ticket = await Ticket.findOne({ number });
   if (!ticket) throw new ApiError(404, "Ticket not found");
 
+  const before = ticket.status;
+
   if (patch.subject !== undefined) ticket.subject = patch.subject;
   if (patch.status !== undefined) ticket.status = patch.status;
   if (patch.priority !== undefined) ticket.priority = patch.priority;
@@ -175,6 +182,13 @@ export async function updateTicket(number: number, patch: UpdateTicketInput) {
       : null;
 
   await ticket.save(); // save() runs the hook that keeps resolvedAt in sync with status
+  if (patch.status === "resolved" && before !== "resolved") {
+    notifyResolved({
+      ticketNumber: ticket.number,
+      subject: ticket.subject,
+      requesterId: ticket.requester,
+    });
+  }
 }
 
 export async function addMessage(
@@ -188,7 +202,7 @@ export async function addMessage(
   const filter: Filter = { number };
   if (!staff) filter.requester = new Types.ObjectId(viewer.id);
   const ticket = await Ticket.findOne(filter).select(
-    "status assignee firstResponseAt",
+    "status assignee firstResponseAt requester subject number",
   );
   if (!ticket) throw new ApiError(404, "Ticket not found");
 
@@ -220,6 +234,26 @@ export async function addMessage(
       if (!ticket.assignee) set.assignee = new Types.ObjectId(viewer.id);
     }
     await Ticket.updateOne({ _id: ticket._id }, update);
+
+    if (staff) {
+      notifyCustomerOfReply({
+        ticketNumber: ticket.number,
+        subject: ticket.subject,
+        requesterId: ticket.requester,
+        authorId: viewer.id,
+        body: input.body,
+        files: uploads.length,
+      });
+    } else {
+      notifyStaffOfReply({
+        ticketNumber: ticket.number,
+        subject: ticket.subject,
+        assigneeId: ticket.assignee,
+        authorId: viewer.id,
+        body: input.body,
+        files: uploads.length,
+      });
+    }
   }
 
   return getMessage(message._id);
