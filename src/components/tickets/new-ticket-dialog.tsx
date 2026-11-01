@@ -82,8 +82,10 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-[13px] font-medium text-fg">{label}</label>
-      {children}
+      <label className="block space-y-1.5">
+        <span className="block text-[13px] font-medium text-fg">{label}</span>
+        {children}
+      </label>
       {error && (
         <p role="alert" className="text-xs text-danger-ink">
           {error}

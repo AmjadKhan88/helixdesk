@@ -6,10 +6,22 @@ import { connectDB } from "@/lib/db";
 import { recentDayStarts, startOfNextDay, weekdayShort } from "@/lib/tz";
 import { Ticket } from "@/models/Ticket";
 import { requirePageUser } from "../session";
+import { APP_TZ } from "@/lib/tz"; // add APP_TZ to your existing tz import
+import { Activity } from "@/models/Activity";
 
 const ACTIVE: Filter = { $in: ["open", "in_progress"] };
 
 // ---------- cards ----------
+
+async function resolvedTickets(range: Filter) {
+  return (
+    await Activity.distinct("ticket", {
+      type: "status",
+      to: "resolved",
+      createdAt: range,
+    })
+  ).length;
+}
 
 export async function getStats(userId: string) {
   await requirePageUser("admin", "agent");
@@ -40,14 +52,8 @@ export async function getStats(userId: string) {
       assignee: new Types.ObjectId(userId),
     }),
     Ticket.countDocuments({ createdAt: { $gte: todayStart } }),
-    Ticket.countDocuments({
-      status: "resolved",
-      resolvedAt: { $gte: todayStart },
-    }),
-    Ticket.countDocuments({
-      status: "resolved",
-      resolvedAt: { $gte: yesterdayStart, $lt: todayStart },
-    }),
+    resolvedTickets({ $gte: todayStart }),
+    resolvedTickets({ $gte: yesterdayStart, $lt: todayStart }),
     Ticket.aggregate<{ _id: "current" | "previous"; avgMs: number }>([
       {
         $match: {
@@ -89,39 +95,66 @@ export async function getWeekActivity() {
 
   const starts = recentDayStarts(7);
   const end = startOfNextDay(starts[6]);
+  const dayKey = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: APP_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
 
-  // Group by day using the timezone-aware boundaries
-  const perDay = (field: "createdAt" | "resolvedAt") =>
+  const [created, resolved] = await Promise.all([
+    // New tickets per day, by the team's calendar day
     Ticket.aggregate<{ _id: Date | "other"; n: number }>([
-      { $match: { [field]: { $gte: starts[0], $lt: end } } },
+      { $match: { createdAt: { $gte: starts[0], $lt: end } } },
       {
         $bucket: {
-          groupBy: `$${field}`,
+          groupBy: "$createdAt",
           boundaries: [...starts, end],
           default: "other",
           output: { n: { $sum: 1 } },
         },
       },
-    ]);
-
-  const [created, resolved] = await Promise.all([
-    perDay("createdAt"),
-    perDay("resolvedAt"),
+    ]),
+    // Resolutions per day from history: one per ticket per day, even if the ticket was reopened later
+    Activity.aggregate<{ _id: string; n: number }>([
+      {
+        $match: {
+          type: "status",
+          to: "resolved",
+          createdAt: { $gte: starts[0], $lt: end },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            day: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$createdAt",
+                timezone: APP_TZ,
+              },
+            },
+            ticket: "$ticket",
+          },
+        },
+      },
+      { $group: { _id: "$_id.day", n: { $sum: 1 } } },
+    ]),
   ]);
-  const toMap = (rows: { _id: Date | "other"; n: number }[]) =>
-    new Map(
-      rows
-        .filter((r) => r._id instanceof Date)
-        .map((r) => [(r._id as Date).getTime(), r.n]),
-    );
-  const c = toMap(created);
-  const r = toMap(resolved);
+
+  const createdByDay = new Map(
+    created
+      .filter((r) => r._id instanceof Date)
+      .map((r) => [(r._id as Date).getTime(), r.n]),
+  );
+  const resolvedByDay = new Map(resolved.map((r) => [r._id, r.n]));
 
   return starts.map((s, i) => ({
     key: s.toISOString(),
     label: i === 6 ? "Today" : weekdayShort(s),
-    created: c.get(s.getTime()) ?? 0,
-    resolved: r.get(s.getTime()) ?? 0,
+    created: createdByDay.get(s.getTime()) ?? 0,
+    resolved: resolvedByDay.get(dayKey(s)) ?? 0,
   }));
 }
 
