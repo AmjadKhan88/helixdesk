@@ -124,7 +124,12 @@ export async function reissueInvite(id: string) {
   user.inviteTokenHash = invite.hash;
   user.inviteExpiresAt = invite.expiresAt;
   await user.save();
-  return invite.token;
+  return {
+    token: invite.token,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
 }
 
 export async function updateMember(
@@ -196,5 +201,5 @@ export async function inviteContact(id: string) {
   user.inviteTokenHash = invite.hash;
   user.inviteExpiresAt = invite.expiresAt;
   await user.save();
-  return invite.token;
+  return { token: invite.token, email: user.email, name: user.name };
 }

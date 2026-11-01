@@ -6,37 +6,65 @@ import { ZodError, type z } from "zod";
 export type Filter = Record<string, any>;
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+    public retryAfter?: number,
+  ) {
     super(message);
   }
 }
 
 /** Wraps a route handler so every error becomes a clean JSON response. */
-export function route<C = unknown>(handler: (req: NextRequest, ctx: C) => Promise<Response>) {
+export function route<C = unknown>(
+  handler: (req: NextRequest, ctx: C) => Promise<Response>,
+) {
   return async (req: NextRequest, ctx: C): Promise<Response> => {
     try {
       return await handler(req, ctx);
     } catch (err) {
       if (err instanceof ApiError) {
-        return NextResponse.json({ error: err.message }, { status: err.status });
+        return NextResponse.json(
+          { error: err.message },
+          {
+            status: err.status,
+            headers: err.retryAfter
+              ? { "Retry-After": String(err.retryAfter) }
+              : undefined,
+          },
+        );
       }
       if (err instanceof ZodError) {
         return NextResponse.json(
-          { error: "Validation failed", issues: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
-          { status: 400 }
+          {
+            error: "Validation failed",
+            issues: err.issues.map((i) => ({
+              path: i.path.join("."),
+              message: i.message,
+            })),
+          },
+          { status: 400 },
         );
       }
       const e = err as { code?: number; name?: string };
-      if (e?.code === 11000) return NextResponse.json({ error: "Already exists" }, { status: 409 });
-      if (e?.name === "CastError") return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+      if (e?.code === 11000)
+        return NextResponse.json({ error: "Already exists" }, { status: 409 });
+      if (e?.name === "CastError")
+        return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
       console.error("[api]", err);
-      return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Something went wrong" },
+        { status: 500 },
+      );
     }
   };
 }
 
-export async function readJson<S extends z.ZodType>(req: Request, schema: S): Promise<z.infer<S>> {
+export async function readJson<S extends z.ZodType>(
+  req: Request,
+  schema: S,
+): Promise<z.infer<S>> {
   if (!req.headers.get("content-type")?.includes("application/json")) {
     throw new ApiError(415, "Content-Type must be application/json");
   }

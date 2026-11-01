@@ -34,7 +34,8 @@ export function InviteLinkPanel({
           <>
             Send this link to{" "}
             <span className="font-medium text-fg">{info.name}</span>. It works
-            once and expires in 7 days. Emails are not sent automatically yet.
+            once and expires in 7 days. If email is set up, we have also sent it
+            to them.
           </>
         )}
       </p>

@@ -13,6 +13,8 @@ export interface IUser {
   inviteTokenHash?: string;
   inviteExpiresAt?: Date;
   passwordSetAt?: Date;
+  resetTokenHash?: string;
+  resetExpiresAt?: Date;
 }
 
 interface IUserMethods {
@@ -37,6 +39,8 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     inviteTokenHash: { type: String, select: false },
     inviteExpiresAt: { type: Date },
     passwordSetAt: { type: Date },
+    resetTokenHash: { type: String, select: false },
+    resetExpiresAt: { type: Date },
   },
   { timestamps: true },
 );

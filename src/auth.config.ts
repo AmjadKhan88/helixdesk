@@ -23,7 +23,16 @@ export const authConfig = {
       const user = auth?.user;
       const path = nextUrl.pathname;
 
-      if (path === "/account-disabled" || path.startsWith("/invite"))
+      // if (path === "/account-disabled" || path.startsWith("/invite"))
+      //   return true;
+      const PUBLIC = [
+        "/account-disabled",
+        "/invite",
+        "/forgot-password",
+        "/signup",
+        "/reset-password",
+      ];
+      if (PUBLIC.some((p) => path === p || path.startsWith(`${p}/`)))
         return true;
 
       if (path === "/login") {
