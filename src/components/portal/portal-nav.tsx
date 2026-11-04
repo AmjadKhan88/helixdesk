@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
+import { Suspense } from "react";
 import { buttonStyles } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function PortalNav() {
+function PortalNavContent() {
   const pathname = usePathname();
   const active =
     pathname === "/portal" || pathname.startsWith("/portal/tickets");
+
   return (
     <nav aria-label="Portal" className="hidden sm:block">
       <Link
@@ -25,6 +27,16 @@ export function PortalNav() {
         My requests
       </Link>
     </nav>
+  );
+}
+
+export function PortalNav() {
+  return (
+    <Suspense
+      fallback={<nav aria-label="Portal" className="hidden sm:block" />}
+    >
+      <PortalNavContent />
+    </Suspense>
   );
 }
 

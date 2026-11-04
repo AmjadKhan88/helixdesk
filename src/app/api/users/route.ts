@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { route, type Filter } from "@/lib/api";
@@ -16,21 +15,33 @@ const querySchema = z.object({
 });
 
 export const GET = route(async (req: NextRequest) => {
-  const me = await requireRole("admin", "agent");           // ← keep the user
-  const { role, q, limit } = querySchema.parse(Object.fromEntries(req.nextUrl.searchParams));
+  const me = await requireRole("admin", "agent"); // ← keep the user
+  const { role, q, limit } = querySchema.parse(
+    Object.fromEntries(req.nextUrl.searchParams),
+  );
   await connectDB();
 
   const filter: Filter = { isActive: true };
-  if (role === "staff") filter.role = { $in: ["admin", "agent"] };   // ← new
+  if (role === "staff")
+    filter.role = { $in: ["admin", "agent"] }; // ← new
   else if (role) filter.role = role;
   if (q) {
     const re = new RegExp(escapeRegex(q), "i");
     filter.$or = [{ name: re }, { email: re }];
   }
 
-  const users = await User.find(filter).sort({ name: 1 }).limit(limit).select("name email role").lean();
+  const users = await User.find(filter)
+    .sort({ name: 1 })
+    .limit(limit)
+    .select("name email role")
+    .lean();
   return NextResponse.json({
-    items: users.map((u) => ({ id: String(u._id), name: u.name, email: u.email, role: u.role })),
-    meId: me.id,                                                      // ← new
+    items: users.map((u) => ({
+      id: String(u._id),
+      name: u.name,
+      email: u.email,
+      role: u.role,
+    })),
+    meId: me.id, // ← new
   });
 });
