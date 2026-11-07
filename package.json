@@ -13,6 +13,7 @@
     "check:storage": "tsx --env-file=.env.local scripts/check-storage.ts",
     "check:deploy": "tsx --env-file=.env.production.local scripts/check-deploy.ts",
     "admin:create": "tsx --env-file=.env.local scripts/create-admin.ts",
+    "fix:counter": "tsx --env-file=.env.local scripts/fix-counter.ts",
     "backfill:activity": "tsx --env-file=.env.local scripts/backfill-activity.ts",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report"

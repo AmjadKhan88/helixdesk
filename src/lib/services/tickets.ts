@@ -141,16 +141,33 @@ export async function createTicket(viewer: Viewer, input: CreateTicketInput) {
   const uploads = await claimUploads(viewer.id, input.attachments); // fail early, before anything is created
   const now = new Date();
 
-  const ticket = await Ticket.create({
-    subject: input.subject,
-    priority: staff ? input.priority : "low",
-    requester,
-    assignee,
-    category,
-    messageCount: 1,
-    lastMessageAt: now,
-    lastMessagePreview: previewOf(input.body, uploads.length > 0),
-  });
+  let ticket;
+  let attempts = 0;
+  while (!ticket && attempts < 3) {
+    try {
+      ticket = await Ticket.create({
+        subject: input.subject,
+        priority: staff ? input.priority : "low",
+        requester,
+        assignee,
+        category,
+        messageCount: 1,
+        lastMessageAt: now,
+        lastMessagePreview: previewOf(input.body, uploads.length > 0),
+      });
+    } catch (err: unknown) {
+      const e = err as { code?: number };
+      if (e?.code === 11000 && attempts < 2) {
+        attempts++;
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!ticket) {
+    throw new ApiError(500, "Failed to create ticket. Please try again.");
+  }
 
   try {
     const message = await Message.create({

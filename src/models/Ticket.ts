@@ -42,15 +42,38 @@ const ticketSchema = new Schema<ITicket>(
   { timestamps: true },
 );
 
-// Auto-increment ticket number (first ticket = 1001)
+// Auto-increment ticket number (first ticket = 1001) with self-healing counter sync
 ticketSchema.pre("validate", async function () {
   if (!this.isNew || this.number) return;
-  const counter = await Counter.findOneAndUpdate(
-    { _id: "ticket" },
-    { $inc: { seq: 1 } },
-    { new: true, upsert: true },
-  );
-  this.number = 1000 + counter.seq;
+  const TicketModel =
+    (this.constructor as Model<ITicket>) ||
+    (mongoose.models.Ticket as Model<ITicket>);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const counter = await Counter.findOneAndUpdate(
+      { _id: "ticket" },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true },
+    );
+    const candidate = 1000 + (counter?.seq ?? 1);
+
+    const exists = await TicketModel.exists({ number: candidate });
+    if (!exists) {
+      this.number = candidate;
+      return;
+    }
+
+    // Counter sequence is behind existing tickets. Fast-forward it to the max existing number.
+    const highest = await TicketModel.findOne({}, { number: 1 })
+      .sort({ number: -1 })
+      .lean();
+
+    const maxNumber = Math.max(highest?.number ?? 1000, candidate);
+    await Counter.updateOne(
+      { _id: "ticket" },
+      { $set: { seq: maxNumber - 1000 } },
+    );
+  }
 });
 
 // Keep resolvedAt in sync with status
